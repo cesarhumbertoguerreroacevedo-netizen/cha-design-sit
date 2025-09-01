@@ -1,0 +1,1 @@
+import * as React from 'react';import { cn } from '@/components/ui/utils';export function Textarea({className,...props}:React.TextareaHTMLAttributes<HTMLTextAreaElement>){return <textarea className={cn('w-full rounded-xl bg-white/5 border border-white/15 px-3 py-2',className)} {...props}/>;}
