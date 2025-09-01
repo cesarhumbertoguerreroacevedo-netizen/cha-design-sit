@@ -4,17 +4,43 @@ import * as React from 'react';
 
 type Side = 'left' | 'right' | 'top' | 'bottom';
 
-type SheetCtx = {
+type SheetContextValue = {
   open: boolean;
-  setOpen: (v: boolean) => void;
+  setOpen: (open: boolean) => void;
 };
-const SheetContext = React.createContext<SheetCtx | null>(null);
 
-/** Contenedor del Sheet (controla el estado abierto/cerrado) */
-export function Sheet({ children }: { children: React.ReactNode }) {
-  const [open, setOpen] = React.useState(false);
+const SheetContext = React.createContext<SheetContextValue | null>(null);
+
+type SheetProps = {
+  children: React.ReactNode;
+  /** Si lo pasas, el Sheet es controlado (usa este valor). */
+  open?: boolean;
+  /** Se llama cada vez que cambia el estado (controlado o no). */
+  onOpenChange?: (open: boolean) => void;
+};
+
+/** Contenedor del Sheet (soporta modo controlado y no controlado) */
+export function Sheet({ children, open, onOpenChange }: SheetProps) {
+  const [internalOpen, setInternalOpen] = React.useState(false);
+
+  const isControlled = typeof open === 'boolean';
+  const actualOpen = isControlled ? (open as boolean) : internalOpen;
+
+  const setOpen = (v: boolean) => {
+    if (!isControlled) setInternalOpen(v);
+    onOpenChange?.(v);
+  };
+
+  // Cerrar con ESC cuando está abierto
+  React.useEffect(() => {
+    if (!actualOpen) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [actualOpen]);
+
   return (
-    <SheetContext.Provider value={{ open, setOpen }}>
+    <SheetContext.Provider value={{ open: actualOpen, setOpen }}>
       {children}
     </SheetContext.Provider>
   );
@@ -80,7 +106,7 @@ export function SheetContent({
   ...props
 }: React.HTMLAttributes<HTMLDivElement> & { side?: Side }) {
   const ctx = React.useContext(SheetContext);
-  if (!ctx) return null;
+  if (!ctx || !ctx.open) return null;
 
   const panelBase =
     'fixed z-50 bg-white dark:bg-neutral-900 shadow-xl p-6 w-80 max-w-[90vw] h-auto';
@@ -90,8 +116,6 @@ export function SheetContent({
     top: 'top-0 left-0 right-0 w-full',
     bottom: 'bottom-0 left-0 right-0 w-full',
   };
-
-  if (!ctx.open) return null;
 
   return (
     <div className="fixed inset-0 z-50">
@@ -137,4 +161,3 @@ export function SheetDescription({
 }: React.HTMLAttributes<HTMLParagraphElement>) {
   return <p className={`text-sm text-neutral-500 ${className ?? ''}`} {...props} />;
 }
-
